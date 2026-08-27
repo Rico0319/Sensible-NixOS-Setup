@@ -39,6 +39,9 @@ below.
 - eza aliases: `ls`, `la`
 - nvim as `$EDITOR`
 - uv, tldr (tealdeer), gcc/gnumake
+- pi coding agent + nodejs (declaratively via nixpkgs; `pi update --self` is
+  a no-op — updates ride the nixpkgs input. Extensions/pi packages live in
+  `~/.pi/agent/` as usual, e.g. `pi install npm:...`)
 
 Differences from the Fedora version, on purpose:
 
@@ -149,6 +152,23 @@ Backups: `systemctl stop minecraft`, then archive `/var/lib/minecraft/world`
   (unlike the Fedora setup, where live edits had to be copied into the repo).
 - New machine: add `hosts/<name>/`, add a `nixosConfigurations.<name>` entry
   in `flake.nix`, and reuse `modules/base.nix` + `home/`.
+
+## Cockpit (web admin)
+
+Same web admin panel Fedora Server ships. `http://server:9090`, log in with
+your system credentials — manage services, logs, storage, networking, and
+open a terminal from the browser. Over HTTPS with a self-signed cert by
+default; also reachable over Tailscale.
+
+Caveat: the "Software Updates" page is Fedora/dnf-specific. On NixOS,
+updates are:
+
+```sh
+nix flake update && sudo nixos-rebuild switch --flake .#server
+```
+
+and rollbacks are `nixos-rebuild switch --rollback` (or a boot-menu
+ generation) — strictly better than anything dnf ever gave you.
 
 ## Roadmap (home-server services)
 

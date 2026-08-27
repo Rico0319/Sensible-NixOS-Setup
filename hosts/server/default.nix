@@ -27,4 +27,16 @@
   # Remote access without opening any inbound ports. Run `sudo tailscale up`
   # once after first boot to authenticate.
   services.tailscale.enable = true;
+
+  # Web admin panel (same tool Fedora ships on Fedora Server).
+  # Browse to http://server:9090 and log in with your system credentials.
+  # Works over Tailscale too (trusted interface). Note: the "Software
+  # Updates" page is Fedora/dnf-specific; on NixOS updates happen via
+  # `nixos-rebuild switch --flake .#server` instead. Services, logs,
+  # terminal, storage, and networking pages all work.
+  services.cockpit = {
+    enable = true;
+    port = 9090;
+    openFirewall = true;
+  };
 }

@@ -4,13 +4,17 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
 
+    # Only used for packages that move faster than the stable release
+    # (currently: pi-coding-agent).
+    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
+
     home-manager = {
       url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { self, nixpkgs, home-manager }: {
+  outputs = { self, nixpkgs, nixpkgs-unstable, home-manager }: {
     # Add more hosts by adding directories under hosts/ and more entries here.
     nixosConfigurations.server = nixpkgs.lib.nixosSystem {
       system = "x86_64-linux";
@@ -22,7 +26,9 @@
         {
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
-          home-manager.users.ricoz = import ./home;
+          home-manager.users.ricoz = import ./home {
+            unstable = nixpkgs-unstable.legacyPackages.x86_64-linux;
+          };
         }
       ];
     };

@@ -3,9 +3,15 @@
 # The declarative equivalent of sensible-fedora-setup's bootstrap.sh:
 # the same daily-driver shell environment, minus the imperative steps.
 # No Oh My Zsh installer, no git clones, no Homebrew — just this file.
+{ unstable ? null }:
 { config, pkgs, lib, ... }:
 
 let
+  # pi moves faster than the nixpkgs stable release — take it from the
+  # unstable input when available (falls back to pkgs otherwise, e.g. when
+  # evaluating this module standalone).
+  pi = (if unstable != null then unstable else pkgs).pi-coding-agent;
+
   # Oh My Zsh custom directory (plugins + theme) in the layout omz expects.
   # home-manager 26.05 removed `oh-my-zsh.customPkgs`, so we build the
   # custom dir ourselves — which also lets p10k be a real omz theme again,
@@ -40,11 +46,22 @@ in
   # ~/.local/bin on PATH (uv tool installs land there).
   home.sessionPath = [ "$HOME/.local/bin" ];
 
+  # npm global prefix — the Nix store is read-only, so `npm install -g`
+  # writes into ~/.local instead (binaries land in ~/.local/bin, on PATH).
+  home.file.".npmrc".text = ''
+    prefix=${config.home.homeDirectory}/.local
+  '';
+
   home.packages = with pkgs; [
     # The bootstrap.sh package list. Homebrew is gone — Nix replaces it.
     uv # Python tooling (uv tool install still works on top)
     tealdeer # tldr, without needing `uv tool install`
     gcc gnumake # @development-tools equivalent
+
+    # Coding agents + their runtime:
+    pi # the `pi` CLI (from nixpkgs-unstable; updates via the flake input,
+       # not `pi update --self`)
+    nodejs # npm, for `pi install npm:...` and extension node_modules
   ];
 
   programs.git.enable = true;
