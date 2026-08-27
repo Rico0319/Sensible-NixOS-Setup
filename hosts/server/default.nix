@@ -3,7 +3,7 @@
 # Machine-specific config only; anything shared with future hosts belongs in
 # modules/base.nix, and user-level tooling in home/.
 {
-  imports = [ ./hardware-configuration.nix ];
+  imports = [ ./hardware-configuration.nix ../../modules/minecraft.nix ];
 
   networking.hostName = "server";
 

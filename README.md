@@ -26,6 +26,7 @@ below.
 | `hosts/server/` | Machine config: hostname, boot, timezone, firewall, tailscale |
 | `hosts/server/hardware-configuration.nix` | **placeholder** — replace on install |
 | `modules/base.nix` | Shared base: nix settings, GC, user, SSH |
+| `modules/minecraft.nix` | Fabric dedicated server (systemd service + firewall) |
 | `home/` | home-manager config — the declarative equivalent of `bootstrap.sh` |
 | `files/p10k.zsh` | Powerlevel10k config, verbatim from the Fedora repo |
 
@@ -86,6 +87,52 @@ After first login: `passwd` (the initial password is `changeme`), then add
 your SSH pubkey to `users.users.ricoz.openssh.authorizedKeys.keys` in
 `modules/base.nix` and flip `PasswordAuthentication` to `false`.
 
+## Minecraft server
+
+A systemd service replicating the old `C:\Users\ricoz\mc-server\start.bat`
+(see `modules/minecraft.nix`):
+
+- Fabric server launcher pinned by hash — **byte-identical** to the Windows
+  copy (MC 26.2, Loader 0.19.3, installer 1.1.2)
+- `jdk21` (same as Prism's bundled "epsilon" runtime), `-Xmx4G`, `nogui`
+- State (world, mods, config, server.properties, eula) lives in
+  `/var/lib/minecraft`, owned by a dedicated `minecraft` user
+- Port 25565/TCP open in the firewall
+
+### One-time data migration (from the Windows box)
+
+After the first rebuild the `minecraft` user and `/var/lib/minecraft` exist.
+From Windows/WSL, copy everything except `start.bat`/`README.md`:
+
+```sh
+tar cf - -C /mnt/c/Users/ricoz/mc-server \
+    world mods config libraries versions .fabric \
+    server.properties eula.txt ops.json whitelist.json \
+  | ssh server 'sudo tar xf - -C /var/lib/minecraft'
+ssh server 'sudo chown -R minecraft:minecraft /var/lib/minecraft'
+```
+
+(`libraries`/`versions`/`.fabric` are included so the first start doesn't
+re-download them — the launcher can fetch them itself if you skip them.)
+
+### Daily operations
+
+```sh
+systemctl status minecraft         # up?
+journalctl -u minecraft -f         # live console output
+sudo systemctl stop minecraft      # clean stop (world saves; may take a while)
+sudo systemctl restart minecraft   # after editing server.properties/mods
+```
+
+The server console (for commands like `op`, `whitelist add`) isn't wired up —
+RCON is disabled in `server.properties` for parity with the old setup.
+`ops.json`/`whitelist.json` were already migrated, so you're admin in-game;
+if you ever need the console, enable RCON in `server.properties` and use
+`mcrcon`, or `systemctl stop` + run the jar manually in tmux.
+
+Backups: `systemctl stop minecraft`, then archive `/var/lib/minecraft/world`
+(same rule as before — never open the old single-player save).
+
 ## Daily operations
 
 - Rebuild: `sudo nixos-rebuild switch --flake .#server`
@@ -105,7 +152,7 @@ your SSH pubkey to `users.users.ricoz.openssh.authorizedKeys.keys` in
 
 ## Roadmap (home-server services)
 
-- [ ] Modded Minecraft via [nix-minecraft](https://github.com/Infinidoge/nix-minecraft)
+- [x] Modded Minecraft — see "Minecraft server" above
 - [ ] Jellyfin + external SSD mount (`fileSystems`, by-uuid, `nofail`)
 - [ ] Immich for photos
 - [x] Tailscale — already enabled; run `sudo tailscale up` once
